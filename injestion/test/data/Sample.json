@@ -1,0 +1,21 @@
+{
+  "title": "Sample JSON File",
+  "description": "This file is used to test the JSONLoader",
+  "version": 1,
+  "items": [
+    {
+      "id": 1,
+      "name": "Item One",
+      "active": true
+    },
+    {
+      "id": 2,
+      "name": "Item Two",
+      "active": false
+    }
+  ],
+  "metadata": {
+    "author": "Test Suite",
+    "created": "2026-01-01"
+  }
+}

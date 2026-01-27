@@ -1,0 +1,341 @@
+REPOSITORY STRUCTURE – RAG KNOWLEDGE ASSISTANT
+=============================================
+
+This document explains the purpose and contents of each directory
+in the repository.
+
+------------------------------------------------------------
+
+ROOT
+----
+main.py
+  Entry point that wires ingestion, retrieval, RAG, and generation.
+
+requirements.txt
+  Python dependencies.
+
+README.md
+  Project overview, architecture, benchmarks, and results.
+
+------------------------------------------------------------
+
+ingestion/
+-----------
+Purpose:
+  Load raw data and convert it into clean, structured documents.
+
+Contents:
+  loaders.py
+    - PDF, Markdown, HTML, and Git repository loaders
+
+  preprocessing.py
+    - Text normalization
+    - Boilerplate removal
+    - Code block handling
+    - Metadata extraction
+
+  chunking.py
+    - Fixed-size chunking
+    - Semantic chunking
+    - Hierarchical chunking (parent → child)
+
+  schemas.py
+    - Document schema
+    - Metadata schema
+
+  README.md
+    - Chunking strategy rationale and tradeoffs
+
+------------------------------------------------------------
+
+embeddings/
+-----------
+Purpose:
+  Generate and manage text embeddings.
+
+Contents:
+  models.py
+    - OpenAI embeddings
+    - BGE embeddings
+    - Instructor embeddings
+
+  embedding_pipeline.py
+    - Batch embedding
+    - Retry logic
+    - Cost and latency tracking
+
+  similarity.py
+    - Cosine similarity
+    - Dot-product similarity
+    - HNSW (Hierarchical Navigable Small World)
+
+  dimensionality_tests.py
+    - Embedding dimensionality experiments
+
+  README.md
+    - Embedding model selection reasoning
+
+------------------------------------------------------------
+
+vector_store/
+-------------
+Purpose:
+  Vector database abstraction and indexing strategies.
+
+Contents:
+  client.py
+    - Faiss/ Pinecone / Qdrant / Weaviate clients
+
+  index.py
+    - HNSW index configuration
+    - Index creation and deletion
+
+  metadata.py
+    - Metadata filtering (source, date, document type)
+
+  sharding.py
+    - Namespace or sharding strategy
+
+  README.md
+    - Why HNSW was chosen
+    - Tradeoffs vs other indexing methods
+
+------------------------------------------------------------
+
+retrieval/
+----------
+Purpose:
+  Retrieve relevant documents efficiently.
+
+Contents:
+  semantic.py
+    - Pure vector similarity search
+
+  hybrid.py
+    - Hybrid retrieval (BM25 + vector search)
+
+  multi_query.py
+    - Query rewriting using LLMs
+
+  retriever.py
+    - Unified retriever interface
+
+  scoring.py
+    - Retrieval metrics (Recall@k, etc.)
+
+  README.md
+    - When to use each retrieval strategy
+
+------------------------------------------------------------
+
+reranking/
+----------
+Purpose:
+  Improve retrieval precision by reordering results.
+
+Contents:
+  cross_encoder.py
+    - Cross-encoder based reranking
+
+  llm_reranker.py
+    - LLM-based reranking
+
+  thresholding.py
+    - Score cutoff strategies
+
+  latency_analysis.py
+    - Precision vs latency analysis
+
+  README.md
+    - Reranking tradeoffs
+
+------------------------------------------------------------
+
+context_optimization/
+---------------------
+Purpose:
+  Optimize retrieved context to fit within token limits.
+
+Contents:
+  context_builder.py
+    - Token-budget-aware context assembly
+
+  compression.py
+    - Summarization
+    - Sentence pruning
+
+  deduplication.py
+    - Remove redundant chunks
+
+  windowing.py
+    - Sliding window context strategies
+
+  README.md
+    - Context failure modes and fixes
+
+------------------------------------------------------------
+
+prompts/
+--------
+Purpose:
+  Prompt engineering and tuning.
+
+Contents:
+  system_prompts.py
+  rag_prompts.py
+  verification_prompts.py
+  query_rewrite_prompts.py
+
+  templates/
+    - Reusable prompt templates
+
+  README.md
+    - Prompt evolution and experiments
+
+------------------------------------------------------------
+
+evaluation/
+-----------
+Purpose:
+  Measure retrieval and generation quality.
+
+Contents:
+  retrieval_metrics.py
+    - Recall@k
+    - Mean Reciprocal Rank (MRR)
+
+  generation_metrics.py
+    - Faithfulness
+    - Answer relevance
+
+  hallucination_checks.py
+    - Hallucination detection
+
+  golden_dataset.py
+    - Ground-truth Q&A pairs
+
+  evaluation_runner.py
+    - End-to-end evaluation pipeline
+
+  README.md
+    - Evaluation methodology
+
+------------------------------------------------------------
+
+benchmarks/
+-----------
+Purpose:
+  Store benchmark results and comparisons.
+
+Contents:
+  chunking_comparison.csv
+  retrieval_strategy_comparison.csv
+  model_comparison.csv
+  latency_vs_accuracy.md
+
+------------------------------------------------------------
+
+api/
+----
+Purpose:
+  Expose the RAG system as a service.
+
+Contents:
+  app.py
+    - FastAPI application
+
+  routes.py
+    - API endpoints
+
+  schemas.py
+    - Request and response models
+
+  dependencies.py
+    - Dependency injection and configs
+
+------------------------------------------------------------
+
+ui/
+---
+Purpose:
+  Demo interface for interacting with the system.
+
+Contents:
+  frontend/
+    - React / Next.js / Streamlit app
+
+  Features:
+    - Retrieval strategy selector
+    - Chunk viewer
+    - Source citation display
+
+------------------------------------------------------------
+
+configs/
+--------
+Purpose:
+  Centralized configuration.
+
+Contents:
+  models.yaml
+  retrieval.yaml
+  chunking.yaml
+  vector_db.yaml
+
+------------------------------------------------------------
+
+scripts/
+--------
+Purpose:
+  One-command workflows and automation.
+
+Contents:
+  ingest_data.py
+  build_index.py
+  run_evaluation.py
+  benchmark_all.py
+
+------------------------------------------------------------
+
+tests/
+------
+Purpose:
+  Ensure correctness and stability.
+
+Contents:
+  Unit tests:
+    - Chunking
+    - Retrieval
+    - Prompt formatting
+
+  Integration tests:
+    - End-to-end RAG pipeline
+
+------------------------------------------------------------
+
+notebooks/
+----------
+Purpose:
+  Research, experimentation, and analysis.
+
+Contents:
+  Chunking experiments
+  Embedding visualization
+  Failure case analysis
+
+------------------------------------------------------------
+
+docs/
+-----
+Purpose:
+  Deep technical documentation.
+
+Contents:
+  architecture.md
+  design_decisions.md
+  failure_cases.md
+  future_work.md
+
+------------------------------------------------------------
+
+END OF DOCUMENT

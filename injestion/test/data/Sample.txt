@@ -1,0 +1,7 @@
+This is a sample text file.
+
+It is used for testing the TextLoader.
+The content spans multiple lines to ensure
+that the loader correctly reads the entire file.
+
+End of sample text.

@@ -1,0 +1,12 @@
+pytest
+beautifulsoup4
+pypdf
+abc
+requests
+pydantic
+langchain-openai
+langchain-community
+langchain
+faiss-cpu
+chromadb
+streamlit

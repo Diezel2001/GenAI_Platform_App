@@ -1,0 +1,4 @@
+id,name,price,in_stock
+1,Widget A,19.99,true
+2,Widget B,29.99,false
+3,Widget C,9.99,true
