@@ -1,7 +1,6 @@
 pytest
 beautifulsoup4
 pypdf
-abc
 requests
 pydantic
 langchain-openai
@@ -10,3 +9,19 @@ langchain
 faiss-cpu
 chromadb
 streamlit
+fastapi 
+uvicorn 
+sqlalchemy 
+asyncpg 
+alembic 
+redis 
+psycopg[binary]
+
+# Vector store clients (uncomment the ones you need)
+pinecone
+qdrant
+pymilvus
+
+# Embedding models
+sentence-transformers
+huggingface-hub
