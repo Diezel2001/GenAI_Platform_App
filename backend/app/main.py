@@ -5,6 +5,7 @@ from contextlib import asynccontextmanager
 # from app.api.auth import router as auth_router
 from app.api.documents import router as document_router
 from app.api.query import router as query_router
+from app.api.agent import router as agent_router
 # from app.api.health import router as health_router
 
 # from app.core.config import settings
@@ -66,7 +67,7 @@ app.add_middleware(
 # app.include_router(auth_router, prefix="/auth", tags=["Auth"])
 app.include_router(document_router, prefix="/documents", tags=["Documents"])
 app.include_router(query_router, prefix="/query", tags=["Query"])
-
+app.include_router(agent_router, prefix="/agent", tags=["Agent"])
 
 # -------------------------
 # Root Endpoint

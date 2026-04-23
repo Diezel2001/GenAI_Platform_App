@@ -1,12 +1,11 @@
 """
-Streamlit Chatbot Frontend for RAG Platform
-============================================
-A chatbot interface with GET/POST request capabilities to communicate with the backend server.
+Streamlit Chatbot Frontend for Agentic Generative AI Platform
 """
 
 import streamlit as st
 import requests
 import json
+import time
 from datetime import datetime
 from typing import Optional, Dict, Any
 
@@ -14,7 +13,7 @@ from typing import Optional, Dict, Any
 # Page Configuration
 # ----------------------------
 st.set_page_config(
-    page_title="RAG Chatbot",
+    page_title="AI AGENT CHATBOT",
     page_icon="🤖",
     layout="wide",
     initial_sidebar_state="expanded"
@@ -142,6 +141,58 @@ def make_post_request(endpoint: str, data: Dict[str, Any], params: Optional[Dict
         }
 
 
+def make_get_request_with_retry(endpoint: str, params: Optional[Dict] = None, max_retries: int = 3, backoff_factor: float = 1.0) -> Dict[str, Any]:
+    """Make a GET request with automatic retry logic."""
+    last_result = None
+    
+    for attempt in range(max_retries):
+        if attempt > 0:
+            # Show retry status
+            st.info(f"🔄 Retry attempt {attempt + 1}/{max_retries}...")
+            time.sleep(backoff_factor * attempt)  # Exponential backoff
+        
+        last_result = make_get_request(endpoint, params)
+        
+        if last_result.get("success"):
+            if attempt > 0:
+                st.success("✅ Request succeeded after retry!")
+            return last_result
+        
+        # Don't retry certain errors
+        error = last_result.get("error", "")
+        if "Invalid JSON" in error or "404" in error or "400" in error:
+            # These errors won't be fixed by retrying
+            break
+    
+    return last_result
+
+
+def make_post_request_with_retry(endpoint: str, data: Dict[str, Any], params: Optional[Dict] = None, max_retries: int = 3, backoff_factor: float = 1.0) -> Dict[str, Any]:
+    """Make a POST request with automatic retry logic."""
+    last_result = None
+    
+    for attempt in range(max_retries):
+        if attempt > 0:
+            # Show retry status
+            st.info(f"🔄 Retry attempt {attempt + 1}/{max_retries}...")
+            time.sleep(backoff_factor * attempt)  # Exponential backoff
+        
+        last_result = make_post_request(endpoint, data, params)
+        
+        if last_result.get("success"):
+            if attempt > 0:
+                st.success("✅ Request succeeded after retry!")
+            return last_result
+        
+        # Don't retry certain errors
+        error = last_result.get("error", "")
+        if "Invalid JSON" in error or "404" in error or "400" in error:
+            # These errors won't be fixed by retrying
+            break
+    
+    return last_result
+
+
 def check_server_health() -> str:
     """Check if the server is healthy."""
     result = make_get_request("/")
@@ -153,23 +204,16 @@ def check_server_health() -> str:
         return "unhealthy"
 
 
-def query_documents(query: str, k: int = 5, use_rag: bool = False) -> Dict[str, Any]:
-    """Query the document search endpoint."""
-    if use_rag:
-        endpoint = "/query/rag"
-        data = {
-            "query": query,
-            "k": k,
-            "include_llm_response": True
-        }
-    else:
-        endpoint = "/query/"
-        data = {
-            "query": query,
-            "k": k
-        }
+def ask_agent(message: str, k: int = 5) -> Dict[str, Any]:
+    """Ask the agent endpoint."""
+    endpoint = "/agent/"
+    data = {
+        "message": message,
+        "k": k
+    }
     
     return make_post_request(endpoint, data)
+
 
 
 def add_to_request_history(method: str, endpoint: str, result: Dict[str, Any]):
@@ -288,8 +332,8 @@ with st.sidebar:
 # ----------------------------
 # Main Chat Area
 # ----------------------------
-st.title("🤖 RAG Chatbot")
-st.caption("Ask questions about your documents using semantic search")
+st.title("🤖 AI AGENT CHATBOT")
+st.caption("Chat with your agent")
 
 # Display chat history
 for message in st.session_state.messages:
@@ -305,7 +349,7 @@ for message in st.session_state.messages:
 # ----------------------------
 # Chat Input
 # ----------------------------
-user_input = st.chat_input("Ask a question about your documents...")
+user_input = st.chat_input("Enter message for Agent")
 
 if user_input:
     # Add user message to chat
@@ -317,39 +361,18 @@ if user_input:
     with st.chat_message("user"):
         st.markdown(user_input)
     
-    # Process the query
+    # Process the query with retry logic
     with st.chat_message("assistant"):
-        with st.spinner("Searching documents..."):
-            # Query the backend
-            result = query_documents(user_input, k=5, use_rag=True)
-            add_to_request_history("POST", "/query/rag", result)
+        with st.spinner("Thinking..."):
+            # Ask the agent with retry logic
+            result = make_post_request_with_retry("/agent/", {"message": user_input, "k": 5})
+            add_to_request_history("POST", "/agent/", result)
             
             if result.get("success"):
                 data = result["data"]
                 
-                # Build response
-                response_parts = []
-                
-                # Add search results
-                if data.get("results"):
-                    response_parts.append(f"**Found {data['total_results']} relevant results:**\n")
-                    
-                    for i, res in enumerate(data["results"], 1):
-                        score = res.get("score", 0)
-                        text = res.get("text", "No text available")
-                        # Truncate long texts
-                        if len(text) > 300:
-                            text = text[:300] + "..."
-                        response_parts.append(f"**Result {i}** (Score: {score:.4f}):\n{text}\n")
-                
-                # Add LLM response if available
-                if data.get("llm_response"):
-                    response_parts.append(f"\n**AI Response:**\n{data['llm_response']}")
-                
-                if not response_parts:
-                    response_parts.append("No results found for your query.")
-                
-                assistant_reply = "\n".join(response_parts)
+                # Get the agent's response
+                assistant_reply = data.get("results", "No response from agent.")
                 
                 st.markdown(assistant_reply)
                 
@@ -358,16 +381,29 @@ if user_input:
                     "role": "assistant",
                     "content": assistant_reply,
                     "metadata": {
-                        "query": data.get("query"),
-                        "total_results": data.get("total_results"),
-                        "vector_store": data.get("vector_store"),
+                        "query": data.get("message"),
                         "server_url": result.get("url")
                     }
                 })
             else:
-                error_msg = f"❌ **Error:** {result.get('error', 'Unknown error')}\n\n"
+                # Provide more helpful error messages based on error type
+                error = result.get("error", "Unknown error")
+                error_msg = f"❌ **Error:** {error}\n\n"
                 error_msg += f"Server URL: {result.get('url', 'N/A')}\n\n"
-                error_msg += "Please check your server configuration in the sidebar."
+                
+                # Add specific guidance based on error type
+                if "Connection failed" in error:
+                    error_msg += "💡 **Suggestions:**\n"
+                    error_msg += "1. Make sure the backend server is running\n"
+                    error_msg += "2. Check your host and port settings in the sidebar\n"
+                    error_msg += "3. Try clicking 'Check Server Status' to verify connectivity"
+                elif "timed out" in error:
+                    error_msg += "💡 **Suggestions:**\n"
+                    error_msg += "1. The server might be under heavy load\n"
+                    error_msg += "2. Try again in a moment\n"
+                    error_msg += "3. Consider reducing the complexity of your question"
+                else:
+                    error_msg += "Please check your server configuration in the sidebar."
                 
                 st.error(error_msg)
                 
@@ -403,15 +439,15 @@ with st.expander("🔧 Advanced: Custom API Request"):
     if st.button("📤 Send Request", use_container_width=True):
         with st.spinner("Sending request..."):
             if request_type == "GET":
-                result = make_get_request(endpoint)
+                result = make_get_request_with_retry(endpoint)
                 add_to_request_history("GET", endpoint, result)
             else:
                 try:
                     body = json.loads(request_body)
-                    result = make_post_request(endpoint, body)
+                    result = make_post_request_with_retry(endpoint, body)
                     add_to_request_history("POST", endpoint, result)
-                except json.JSONDecodeError:
-                    st.error("Invalid JSON in request body")
+                except json.JSONDecodeError as e:
+                    st.error(f"❌ Invalid JSON in request body: {e}")
                     result = None
             
             if result:

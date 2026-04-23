@@ -19,8 +19,8 @@ psycopg[binary]
 
 # Vector store clients (uncomment the ones you need)
 pinecone
-qdrant
-pymilvus
+# qdrant
+# pymilvus
 
 # Embedding models
 sentence-transformers

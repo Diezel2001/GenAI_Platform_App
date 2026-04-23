@@ -4,12 +4,14 @@ A Streamlit-based chatbot frontend for the Agentic Generative AI Platform.
 
 ## Features
 
-- Interactive Chat Interface - Ask questions about your documents
-- Configurable Server Connection - Set host and port via sidebar
-- GET/POST Request Support - Full HTTP request capabilities
-- Request History - Track all API calls
-- Health Monitoring - Check server status
-- Semantic Search - Query documents using RAG pipeline
+- **Interactive Chat Interface** - Chat with AI Agent about anything
+- **Configurable Server Connection** - Set host and port via sidebar
+- **GET/POST Request Support** - Full HTTP request capabilities with custom endpoint support
+- **Request History** - Track all API calls with timestamps and status
+- **Health Monitoring** - Real-time server status checking with visual indicators
+- **Automatic Retry Logic** - Exponential backoff for failed requests
+- **Custom API Requests** - Advanced section for arbitrary GET/POST requests
+- **Chat Controls** - Clear chat history and manage conversation state
 
 ## Installation
 
@@ -43,35 +45,71 @@ The app will be available at: http://localhost:8501
 
 ### Configuration
 
-1. Server Settings (Sidebar):
+1. **Server Settings (Sidebar)**:
    - Host: Server hostname (default: localhost)
    - Port: Server port (default: 8000)
+   - Real-time server URL display
 
-2. Quick Actions:
+2. **Quick Actions**:
    - Health Check (GET /)
    - Query Health (GET /query/health)
+   - Check Server Status button
 
-3. Chat:
-   - Type your question in the chat input
-   - The app will query the backend RAG API
-   - Results are displayed with relevance scores
+3. **Chat Interface**:
+   - Type your message in the chat input
+   - The app will query the backend Agent API
+   - Responses displayed with metadata details (expandable)
+
+4. **Chat Controls**:
+   - Clear Chat History button to reset conversation
+
+5. **Advanced: Custom API Request**:
+   - Make arbitrary GET/POST requests to any endpoint
+   - JSON body editor for POST requests
+   - Automatic retry with exponential backoff
 
 ### Advanced Usage
 
 Use the Custom API Request section to make arbitrary GET/POST requests:
 
-GET /query/health
-POST /query/rag
-Body: {"query": "your question", "k": 5}
+**GET Example:**
+```
+Endpoint: /query/health
+```
+
+**POST Example:**
+```
+Endpoint: /agent/
+Body: {"message": "your question", "k": 5}
+```
 
 ## API Endpoints
 
 The frontend connects to these backend endpoints:
 
-- GET / - Health check
-- GET /query/health - Query service health
-- POST /query/ - Semantic document search
-- POST /query/rag - RAG query with LLM response
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/` | Health check |
+| GET | `/query/health` | Query service health |
+| POST | `/agent/` | Agent chat endpoint (main) |
+
+### Agent Endpoint Details
+
+**Request Body:**
+```json
+{
+  "message": "string (1-5000 chars)",
+  "k": "integer (1-100, default: 5)"
+}
+```
+
+**Response:**
+```json
+{
+  "message": "original message",
+  "results": "agent response text"
+}
+```
 
 ## Running with Backend
 
@@ -112,13 +150,22 @@ If you see "Connection failed - server may be down":
 1. Ensure the backend server is running
 2. Check the host/port settings in the sidebar
 3. Verify firewall settings
+4. Try clicking "Check Server Status" to verify connectivity
 
 ### Timeout Errors
 
 If requests timeout:
 1. Check server load
-2. Increase timeout in app.py if needed
-3. Verify network connectivity
+2. The app automatically retries with exponential backoff
+3. Try simplifying your question
+4. Consider increasing timeout in app.py if needed
+
+### Invalid JSON Errors
+
+If you see JSON parsing errors in Custom API Request:
+1. Verify your JSON body is properly formatted
+2. Use double quotes for strings
+3. Check for trailing commas
 
 ## License
 

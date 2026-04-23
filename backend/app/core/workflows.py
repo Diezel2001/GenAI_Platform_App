@@ -33,6 +33,10 @@ def format_messages(messages):
         formatted.append(f"{role}: {m.content}")
     return "\n".join(formatted)
 
+def _make_human_message(content: str) -> HumanMessage:
+    """Return a HumanMessage with the given content."""
+    return HumanMessage(content=content)
+
 # =============================================================================
 # STATE SCHEMA
 # =============================================================================
@@ -100,9 +104,16 @@ def analyze_node(state: WorkflowState) -> dict:
         }
 
     data = parsed["data"]
+    analysis_result = data.get("analysis", content)
+    if isinstance(analysis_result, dict) and "message" in analysis_result:
+        analysis_text = analysis_result["message"]
+    else:
+        analysis_text = analysis_result
+
     return {
-        "messages": [AIMessage(content=data.get("analysis", content))]
+        "messages": [AIMessage(content=analysis_text)]
     }
+    
 
 def route_node(state: WorkflowState) -> dict:
     """Route based on analysis using task_router_p."""
