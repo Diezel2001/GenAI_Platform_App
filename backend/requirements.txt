@@ -5,7 +5,11 @@ requests
 pydantic
 langchain-openai
 langchain-community
+langchain-core
+langchain-ollama
 langchain
+langgraph
+langgraph-checkpoint-redis
 faiss-cpu
 chromadb
 streamlit
@@ -16,6 +20,7 @@ asyncpg
 alembic 
 redis 
 psycopg[binary]
+python-multipart
 
 # Vector store clients (uncomment the ones you need)
 pinecone

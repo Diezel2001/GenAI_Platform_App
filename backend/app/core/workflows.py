@@ -237,7 +237,7 @@ def route_router(state: WorkflowState) -> Literal["direct", "react", "plan"]:
 # WORKFLOW
 # =============================================================================
 
-def create_workflow() -> StateGraph:
+def create_agent_workflow() -> StateGraph:
     """Creates the workflow graph."""
     workflow = StateGraph(WorkflowState)
 

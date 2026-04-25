@@ -1,4 +1,4 @@
-# 🚧 GenAI Platform App — Work in Progress
+# GenAI Platform App — Work in Progress
 
 > ⚠️ This project is actively under development. Features and architecture may change.
 
@@ -6,7 +6,7 @@ An **Agentic Generative AI Platform** for developing, testing, and deploying AI 
 
 ---
 
-## 🏗️ Project Structure
+## Project Structure
 
 ```
 GenAI_Platform_App/
@@ -25,7 +25,7 @@ GenAI_Platform_App/
 
 ---
 
-## 🛠️ Tech Stack
+## Tech Stack
 
 **Backend:**
 - FastAPI + Uvicorn
@@ -42,29 +42,59 @@ GenAI_Platform_App/
 
 ---
 
-## 🚀 Quick Start
+## Backend Quick Start
 
-### Prerequisite
+Choose one of the following Backend deployment methods:
+
+---
+
+### Option 1: Full Docker Setup (Recommended)
+Runs **Backend, Redis, PostgreSQL database** all inside docker containers.
+You only need docker installed for this option.
+
 ```bash
-pip install -r ../requirements.txt
+# Build and start all services
+docker-compose up --build
 ```
 
-### Backend
+---
+
+### Option 2: Run Backend Locally (without Docker)
+Use this for backend development. You will need to run Redis separately.
+
+#### Prerequisites:
 ```bash
+# Install backend dependencies
 cd backend
-uvicorn app.main:app --reload --port 8000
+pip install -r requirements.txt
 ```
 
-### Frontend
+#### Step 1: Start Redis database
 ```bash
+docker run -d --name redis-stack -p 6379:6379 -p 8001:8001 redis/redis-stack:latest
+```
+
+#### Step 2: Start FastAPI backend server
+```bash
+# From backend/ directory
+uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+```
+
+---
+
+## Frontend Quick Start
+Frontend can be run independently and will connect to a running backend instance.
+
+```bash
+# Install frontend dependencies (first run only)
 cd frontend/streamlit_app
+pip install -r requirements.txt
+
+# Start Streamlit UI
 streamlit run app.py
 ```
 
-### Docker (will be iplemented in the future)
-```bash
-docker-compose up --build
-```
+Frontend will open automatically at: http://localhost:8501
 
 ---
 

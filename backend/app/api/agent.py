@@ -1,9 +1,9 @@
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Request
 from pydantic import BaseModel, Field
 from typing import List, Dict, Any, Optional
 
-from app.core.workflows import create_workflow, _make_human_message
+from app.core.workflows import _make_human_message
 
 class AgentRequestSchema(BaseModel):
     """Request schema for chat endpoint."""
@@ -21,6 +21,7 @@ class AgentRequestSchema(BaseModel):
         ge=1,
         le=100,
     )
+    session_id: str
 
 
 class AgentResponseSchema(BaseModel):
@@ -34,17 +35,17 @@ class AgentResponseSchema(BaseModel):
 router = APIRouter()
 
 @router.post("/", response_model=AgentResponseSchema)
-async def agent_input_injestion(input: AgentRequestSchema):
+async def agent_input_injestion(request: Request, input: AgentRequestSchema):
     # Create and compile the workflow
-    workflow = create_workflow().compile()
+    graph = request.app.state.graph
     
     # Create human message from request
     human_message = _make_human_message(input.message)
     
     # Invoke the workflow with initial state
-    result = workflow.invoke({
-        "messages": [human_message],
-    })
+    result = graph.invoke(
+        {"messages": [human_message]}, 
+        config={"configurable": {"thread_id": input.session_id}})
     
     # Extract the last AI message from the response
     messages = result.get("messages", [])

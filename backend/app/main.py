@@ -7,11 +7,24 @@ from app.api.documents import router as document_router
 from app.api.query import router as query_router
 from app.api.agent import router as agent_router
 # from app.api.health import router as health_router
+from langgraph.checkpoint.redis import RedisSaver  
+
+from app.core.workflows import create_agent_workflow
+
 
 # from app.core.config import settings
 # from app.core.logging import configure_logging
 
 # from prometheus_fastapi_instrumentator import Instrumentator
+
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
+
+REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379")
+DATABASE_URL = os.getenv("DATABASE_URL")
+
 
 
 # -------------------------
@@ -20,12 +33,21 @@ from app.api.agent import router as agent_router
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Startup
-    # configure_logging()
-    print("🚀 Application starting up...")
-    yield
-    # Shutdown
-    print("🛑 Application shutting down...")
+
+    with RedisSaver.from_conn_string(REDIS_URL) as checkpointer:
+        checkpointer.setup()
+        graph = create_agent_workflow().compile(
+            checkpointer=checkpointer
+        )
+
+        app.state.graph = graph
+        app.state.checkpointer = checkpointer
+
+        print("🚀 Application starting up...")
+
+        yield
+
+        print("🛑 Application shutting down...")
 
 
 # -------------------------

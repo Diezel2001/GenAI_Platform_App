@@ -6,6 +6,7 @@ import streamlit as st
 import requests
 import json
 import time
+import uuid
 from datetime import datetime
 from typing import Optional, Dict, Any
 
@@ -61,6 +62,9 @@ if "server_status" not in st.session_state:
 
 if "request_history" not in st.session_state:
     st.session_state.request_history = []
+
+if "session_id" not in st.session_state:
+    st.session_state.session_id = str(uuid.uuid4())
 
 
 # ----------------------------
@@ -209,7 +213,8 @@ def ask_agent(message: str, k: int = 5) -> Dict[str, Any]:
     endpoint = "/agent/"
     data = {
         "message": message,
-        "k": k
+        "k": k,
+        "session_id": st.session_state.session_id
     }
     
     return make_post_request(endpoint, data)
@@ -365,7 +370,10 @@ if user_input:
     with st.chat_message("assistant"):
         with st.spinner("Thinking..."):
             # Ask the agent with retry logic
-            result = make_post_request_with_retry("/agent/", {"message": user_input, "k": 5})
+            result = make_post_request_with_retry(
+                "/agent/",
+                {"message": user_input, "k": 5, "session_id": st.session_state.session_id}
+            )
             add_to_request_history("POST", "/agent/", result)
             
             if result.get("success"):
