@@ -2,6 +2,16 @@ pytest
 beautifulsoup4
 pypdf
 requests
+streamlit
+fastapi 
+uvicorn 
+sqlalchemy 
+asyncpg 
+alembic 
+psycopg[binary]
+python-multipart
+
+# Workflow Orchestration
 pydantic
 langchain-openai
 langchain-community
@@ -9,24 +19,23 @@ langchain-core
 langchain-ollama
 langchain
 langgraph
+
+# llm Memory
 langgraph-checkpoint-redis
-faiss-cpu
-chromadb
-streamlit
-fastapi 
-uvicorn 
-sqlalchemy 
-asyncpg 
-alembic 
-redis 
-psycopg[binary]
-python-multipart
+redis
 
 # Vector store clients (uncomment the ones you need)
 pinecone
+faiss-cpu
+chromadb
 # qdrant
 # pymilvus
 
 # Embedding models
 sentence-transformers
 huggingface-hub
+
+# observability
+prometheus-fastapi-instrumentator 
+prometheus-client
+langfuse

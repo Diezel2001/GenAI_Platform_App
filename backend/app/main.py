@@ -11,26 +11,57 @@ from langgraph.checkpoint.redis import RedisSaver
 
 from app.core.workflows import create_agent_workflow
 
-
 # from app.core.config import settings
 # from app.core.logging import configure_logging
 
-# from prometheus_fastapi_instrumentator import Instrumentator
+from prometheus_fastapi_instrumentator import Instrumentator
+from prometheus_client import Counter, Histogram, Gauge
 
 import os
 from dotenv import load_dotenv
 
 load_dotenv()
 
+
+# Environment Variables
 REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379")
 DATABASE_URL = os.getenv("DATABASE_URL")
 
 
-
 # -------------------------
+# Metrics
+# -------------------------
+
+# Agent Metrics
+AGENT_RUNS = Counter("agent_runs_total", "Total agent runs")
+AGENT_ERRORS = Counter("agent_errors_total", "Agent failures")
+AGENT_LATENCY = Histogram("agent_latency_seconds", "Agent execution time")
+AGENT_STEPS = Histogram("agent_steps", "Steps per execution")
+
+# llm usage metrics
+LLM_CALLS = Counter("llm_calls_total", "Total LLM calls")
+TOKENS_INPUT = Counter("llm_input_tokens_total", "Input tokens")
+TOKENS_OUTPUT = Counter("llm_output_tokens_total", "Output tokens")
+LLM_LATENCY = Histogram("llm_latency_seconds", "LLM response time")
+
+# tool usage
+TOOL_CALLS = Counter("tool_calls_total", "Tool usage", ["tool_name"])
+TOOL_ERRORS = Counter("tool_errors_total", "Tool errors", ["tool_name"])
+TOOL_LATENCY = Histogram("tool_latency_seconds", "Tool latency", ["tool_name"])
+
+# rag retrieval metrics
+RETRIEVAL_LATENCY = Histogram("retrieval_latency_seconds", "RAG retrieval time")
+DOCS_RETRIEVED = Histogram("documents_retrieved", "Docs per query")
+CACHE_HITS = Counter("rag_cache_hits_total", "Cache hits")
+CACHE_MISSES = Counter("rag_cache_misses_total", "Cache misses")
+
+# memory
+MEMORY_READ_LATENCY = Histogram("memory_read_seconds", "Memory read time")
+MEMORY_WRITE_LATENCY = Histogram("memory_write_seconds", "Memory write time")
+ACTIVE_SESSIONS = Gauge("active_sessions", "Active sessions")
+
+
 # Lifespan Events
-# -------------------------
-
 @asynccontextmanager
 async def lifespan(app: FastAPI):
 
@@ -62,6 +93,7 @@ app = FastAPI(
 )
 
 
+
 # -------------------------
 # Middleware
 # -------------------------
@@ -78,8 +110,13 @@ app.add_middleware(
 # -------------------------
 # Metrics (Prometheus)
 # -------------------------
+Instrumentator(
+    should_group_status_codes=False,
+    should_ignore_untemplated=True,
+    should_respect_env_var=True,
+    excluded_handlers=["/metrics", "/"],
+).instrument(app).expose(app, include_in_schema=False)
 
-# Instrumentator().instrument(app).expose(app)
 
 
 # -------------------------

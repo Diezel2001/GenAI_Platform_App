@@ -379,8 +379,12 @@ if user_input:
             if result.get("success"):
                 data = result["data"]
                 
-                # Get the agent's response
-                assistant_reply = data.get("results", "No response from agent.")
+                # Format the response as: analysis, route, result
+                analysis = data.get("analysis", "N/A")
+                route = data.get("route", "N/A")
+                results = data.get("results", "No response from agent.")
+                
+                assistant_reply = f"Analysis: {analysis}\n\nRoute: {route}\n\nResult: {results}"
                 
                 st.markdown(assistant_reply)
                 

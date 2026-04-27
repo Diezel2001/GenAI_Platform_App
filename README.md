@@ -98,29 +98,29 @@ Frontend will open automatically at: http://localhost:8501
 
 ---
 
-## 📸 Streamlit App Screenshots
+## Streamlit App Screenshots
 
 ![Sample Screen](Sample_Screen.png)
 
 ---
 
-## 📋 Todo
+## Todo
 
 - improve observability
-    - Langfuse → tracing
-    - Prometheus → metrics
-    - Grafana → dashboard
+    - [] Langfuse → tracing
+    - [] Prometheus → metrics
+    - [] Grafana → dashboard
 - Agent Memory Management 
-    - current chat session context memory
-    - Episodic memory(daily and per session log)
-    - Semmantic (user info)
+    - [x] current chat session context memory
+    - [] Episodic memory(daily and per session log)
+    - [] Semmantic (user info)
 - agent tools
-    - memory retrieval (RAG, cached memory search)
-    - context compaction
+    - [] memory retrieval (RAG, cached memory search)
+    - [] context compaction
     - other usefull tools
 - research about:
-    - LlamaIndex – structured data + retrieval
-    - DSPy – declarative prompting + optimization
+    - [] LlamaIndex – structured data + retrieval
+    - [] DSPy – declarative prompting + optimization
 
 ---
 

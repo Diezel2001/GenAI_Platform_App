@@ -40,18 +40,20 @@ router_p = PromptTemplate(
     1) DIRECT
     - Answer immediately using reasoning
     - No tools or external data needed
+    - ONLY for greetings, simple conversational queries, or opinions
     2) REACT
     - Solve step-by-step using tools or retrieval
     - Next action is clear at each step
+    - Use for: calculations, factual questions, document searches, data lookups
     3) PLAN
     - Break problem into multiple steps
     - Requires decomposition before execution
 
     Rules:
-    - Prefer DIRECT if the question is simple and fully answerable
-    - Use REACT if tools or retrieval are needed in a step-by-step way
+    - Use REACT for ANY question involving calculations, or data retrieval
+    - Use DIRECT ONLY for greetings (hello, hi) or simple conversational queries
     - Use PLAN if the task requires multiple steps or coordination
-    - Default to PLAN only if REACT is insufficient
+    - When in doubt, prefer Direct over react
 
     Output STRICT JSON only:
     {{
@@ -65,42 +67,67 @@ router_p = PromptTemplate(
 agent_template_p = PromptTemplate(
     input_variables=["tools", "messages"],
     template="""
-    You are an AI agent that follows (Reason → Act → Observe).
+You are a strict tool-using agent.
+Rules:
+- If a tool can answer the question, you MUST use it.
+- Do NOT answer from your own knowledge if a tool exists.
+- Do NOT guess tool outputs
+- Output ONLY valid JSON.
+- No explanations outside JSON.
+- Keep reasoning in "thought" short and internal (1 sentence max)
+- when given a tool result reason out if the result is the answer to the user message,
+if this is so and tool result already answers the user question, 
+you MUST return type="final" then output final answer in final_answer
 
-    Messages:
-    {messages}
+# OUTPUT FORMAT (STRICT JSON ONLY)
+Valid format 1 — Tool call:
+{{
+    "type": "tool",
+    "thought": "brief reasoning for selecting tool",
+    "action": "tool_name",
+    "args": {{ }}
+}}
+Valid format 2 — Final answer:
+{{
+    "type": "final",
+    "thought": "brief reasoning for concluding",
+    "final_answer": "final response to user"
+}}
 
-    You have access to the following tools:
-    {tools}
+---
 
-    When performing task
-    1. Think step-by-step about what to do.
-    2. Decide if a tool is needed.
-    3. If tool needed, fill up action and args in json output.
-    4. After each action, you will receive an observation.
-    5. Continue reasoning and acting until you can provide a final answer.
+# CONTEXT
+You are in an iterative reasoning loop.
 
-    Rules:
-    - Do not skip reasoning.
-    - Always use tools when external information is required.
-    - Do not hallucinate tool outputs.
-    - Stop when sufficient information is gathered.
-    - Output the final answer in a clear, concise format.
+Messages:
+{messages}
 
-    Output in JSON Format:
-    {{
-        "thought": "Your reasoning for choosing action",
-        "action": "tool_name_here",
-        "args": {{
-            "arg1": value,
-            "arg2": value
-        }},
-        "is_final": True | False,
-        "final_answer": "..."
-    }}
+---
 
-    If you have the final answer, set "is_final": true and put the answer in "final_answer".
-    """
+# LIST OF AVAILABLE TOOLS
+{tools}
+
+---
+
+# TOOL USAGE RULES
+- When a tool is used, set:
+  - "type": "tool"
+  - "action": must match exactly one tool name
+  - "args": must match tool parameters exactly
+
+- If no tool is needed, return final answer:
+  - "type": "final"
+  - "final_answer": concise and correct response
+
+---
+
+# TOOL SAFETY RULES
+- Never invent tool names
+- Never omit required arguments
+- If unsure about arguments, choose "final" and explain briefly
+- Do not assume tool outputs without calling tools
+
+"""
 )
 
 planner_p = PromptTemplate(
