@@ -51,7 +51,7 @@ async def agent_input_injestion(request: Request, input: AgentRequestSchema):
             message=input.message,
             results=response_text,
             route = result.get("route", ""),
-            analysis = result.get("analysis", _make_ai_message("")).content
+            analysis = result.get("analysis", "")
         )
 
     except Exception as e:

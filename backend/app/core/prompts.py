@@ -1,23 +1,24 @@
 from langchain_classic.prompts import PromptTemplate
 
 message_analyzer_p = PromptTemplate(
-    input_variables=["message"],
+    input_variables=["message", "convo"],
     template="""
-    You are a message analyzer and editor.
-    Edit message only if:
-    -need fixing of grammar and spelling
-    -if message is incomplete try to deduce what it means then add to it or rewrite if necessary
+    You are a message analyzer.
 
-    Analyze message and determine:
-    -actual message only if it needed editing     
+    Analyze user message and determine:
+    -actual message only if it needed editing or incomplete   
     -message type (QUESTION, COMMAND, INSTRUCTION, STATEMENT)                                                                                               
     -what is being asked or meaning of the message? what does the user want?
     -message complexity (LOW, MEDIUM or HIGH)
     -external data dependency - is it explicitly/implicitly dependent on a document.
     -tool dependency (NONE, LOW, MEDIUM, HIGH) and (tools needed)
     -cognitive operations required, atmost 5 (e.g., comparison, synthesis, planning)
-                                    
-    message: {message}
+
+    Conversation so far:
+    {convo}
+
+    user message: 
+    {message}
                                                     
     Analysis should be your reasoning about the message
     should be short (one to two paragraph long) compiling  all relevant information.
@@ -29,11 +30,17 @@ message_analyzer_p = PromptTemplate(
 )
 
 router_p = PromptTemplate(
-    input_variables=["messages"],
+    input_variables=["messages", "analysis", "user_message"],
     template="""
     You are an intelligent task router for an AI agent.
-    Given the conversation so far:
+    Given Conversation so far:
     {messages}
+
+    Given user message:
+    {user_message}
+
+    and Given Analysis:
+    {analysis}
 
     Decide how to handle the latest user request.
     Available routes:
@@ -54,6 +61,7 @@ router_p = PromptTemplate(
     - Use DIRECT ONLY for greetings (hello, hi) or simple conversational queries
     - Use PLAN if the task requires multiple steps or coordination
     - When in doubt, prefer Direct over react
+    - No explanations outside JSON, output only in json format.
 
     Output STRICT JSON only:
     {{
@@ -85,7 +93,7 @@ Valid format 1 — Tool call:
     "type": "tool",
     "thought": "brief reasoning for selecting tool",
     "action": "tool_name",
-    "args": {{ }}
+    "args": {{...}}
 }}
 Valid format 2 — Final answer:
 {{
@@ -126,6 +134,107 @@ Messages:
 - Never omit required arguments
 - If unsure about arguments, choose "final" and explain briefly
 - Do not assume tool outputs without calling tools
+
+"""
+)
+
+reason_prompt = PromptTemplate(
+    input_variables=["tools", "user_message", "observations", "analysis"],
+
+    template="""
+You are a reasoning node in a ReAct agent loop.
+
+You are given:
+- USER MESSAGE
+- ANALYSIS OF USER MESSAGE
+- PREVIOUS OBSERVATIONS (if any)
+
+Decide:
+- If a tool can answer or help get to the answer of the question/message, use the tool.
+- If observation already answers the question/message, give final answer
+
+STRICT RULES:
+- If a tool can improve the answer, use it
+- Do NOT answer from your own knowledge if a tool exists.
+- Do NOT guess tool outputs
+- Do NOT hallucinate tool results
+- Output ONLY valid JSON.
+- No explanations outside JSON.
+
+AVAILABLE TOOLS:
+{tools}
+
+USER MESSAGE:
+{user_message}
+
+ANALYSIS OF USER MESSAGE:
+{analysis}
+
+PREVIOUS OBSERVATIONS:
+{observations}
+
+# OUTPUT FORMAT (STRICT JSON ONLY)
+Valid format 1 — Tool call:
+{{
+    "type": "tool",
+    "thought": "brief reasoning for selecting tool",
+    "action": "tool_name",
+    "args": {{...}}
+}}
+Valid format 2 — Final answer:
+{{
+    "type": "final",
+    "thought": "brief reasoning for concluding",
+    "final_answer": "final response to user"
+}}
+
+# TOOL USAGE RULES
+- When a tool is used, set:
+  - "type": "tool"
+  - "action": must match exactly one tool name
+  - "args": must match tool parameters exactly
+
+- If no tool is needed, return final answer:
+  - "type": "final"
+  - "final_answer": concise and correct response
+
+# TOOL SAFETY RULES
+- Never invent tool names
+- Never omit required arguments
+- If unsure about arguments, choose "final" and explain briefly
+- Do not assume tool outputs without calling tools
+
+"""
+)
+
+observe_prompt = PromptTemplate(
+    input_variables=["user_message", "result", "analysis"],
+
+    template="""
+You are an observation node.
+
+Your job:
+- Interpret tool results
+- Extract only useful information
+- Keep it concise and factual
+
+USER QUESTION:
+{user_message}
+
+ANALYSIS OF USER MESSAGE:
+{analysis}
+
+TOOL RESULT:
+{result}
+
+Rules:
+- Output ONLY valid JSON.
+- No explanations outside JSON.
+
+Output STRICT JSON only:
+{{
+    "obs": "A short, clear summary of what was learned from the tool.",
+}}
 
 """
 )
