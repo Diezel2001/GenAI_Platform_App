@@ -15,3 +15,4 @@ docker run -d \
   prom/prometheus
 
 docker run -d -p 3000:3000 grafana/grafana
+docker run -d -p 3000:3000 langfuse/langfuse

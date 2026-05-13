@@ -2,7 +2,7 @@ import faiss
 import numpy as np
 import pickle
 from typing import List, Dict, Any, Optional
-from vector_store.vs_base import VectorStore
+from .vs_base import VectorStore
 from app.services.rag.rag_schemas import RecordData, SearchResult
 
 class FaissVectorStore(VectorStore):

@@ -41,6 +41,36 @@ def _make_human_message(content: str) -> HumanMessage:
 def _make_ai_message(content: str) -> AIMessage:
     return AIMessage(content=content)
 
+def build_agent_context(messages):
+    last_user_idx = None
+
+    for i in reversed(range(len(messages))):
+        if isinstance(messages[i], HumanMessage):
+            last_user_idx = i
+            break
+
+    if last_user_idx is None:
+        return None, []
+
+    user_msg = messages[last_user_idx].content
+
+    tool_msgs = [
+        m for m in messages[last_user_idx+1:]
+        if isinstance(m, ToolMessage)
+    ]
+
+    return user_msg, tool_msgs
+
+def format_agent_context(user_msg, tool_msgs):
+    context = f"USER QUESTION:\n{user_msg}\n\n"
+
+    if tool_msgs:
+        context += "Observation:\n"
+        for i, t in enumerate(tool_msgs, 1):
+            context += f"{i}. {t.content}\n"
+
+    return context
+
 # =============================================================================
 # STATE
 # =============================================================================
@@ -433,3 +463,16 @@ def create_agent_workflow() -> StateGraph:
     workflow.add_edge("direct", END)
 
     return workflow
+
+
+def generate_viz(app):
+
+    print("🖼️ Generating graph PNG...")
+    png_bytes = app.get_graph().draw_mermaid_png()
+
+    output_file = "workflow.png"
+
+    with open(output_file, "wb") as f:
+        f.write(png_bytes)
+
+    print(f"✅ Graph saved as {output_file}")
