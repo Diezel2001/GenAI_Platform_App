@@ -38,11 +38,11 @@ async def agent_input_injestion(request: Request, input: AgentRequestSchema):
         # )
 
         result = agent.invoke(
-            user_input=input.message,
+            task=input.message,
             thread_id=input.session_id
         )
 
-        response_text = result.response
+        response_text = result
 
         # messages = result.get("messages", [])
         # response_text = ""

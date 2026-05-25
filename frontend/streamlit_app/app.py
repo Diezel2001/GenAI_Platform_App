@@ -57,7 +57,7 @@ def get_base_url() -> str:
 def make_post_request(endpoint: str, data: Dict[str, Any]) -> Dict[str, Any]:
     url = f"{get_base_url()}{endpoint}"
     try:
-        response = requests.post(url, json=data, timeout=30)
+        response = requests.post(url, json=data)
         response.raise_for_status()
         return {"success": True, "data": response.json()}
     except Exception as e:

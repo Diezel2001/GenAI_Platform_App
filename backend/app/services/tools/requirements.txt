@@ -1,0 +1,49 @@
+# =============================================================
+# requirements.txt
+# Dependencies for all tool modules.
+# Core deps are always required.
+# Optional deps are needed only for specific backends.
+# =============================================================
+
+
+# -------------------------------------------------------------
+# CORE — always required
+# -------------------------------------------------------------
+
+pydantic>=2.0
+chardet                     # encoding detection (file_tools.py)
+rank-bm25                   # BM25 search (skill_manager.py)
+sentence-transformers       # semantic embeddings (skill_manager.py)
+scikit-learn                # cosine similarity (skill_manager.py)
+numpy                       # embedding matrix operations
+pyyaml                      # YAML frontmatter parsing (skill_manager.py)
+
+# LangGraph + LangChain (worker agent)
+langgraph
+langchain-core
+
+
+# -------------------------------------------------------------
+# OPTIONAL — install based on which backends you use
+# -------------------------------------------------------------
+
+# PostgreSQL support (sql_tools.py DB_ENGINE=postgres)
+# psycopg2-binary
+
+# MySQL support (sql_tools.py DB_ENGINE=mysql)
+# mysql-connector-python
+
+# Google Calendar support (calendar_tools.py CALENDAR_BACKEND=google)
+# google-api-python-client
+# google-auth
+# google-auth-httplib2
+# google-auth-oauthlib
+
+# CalDAV calendar support (calendar_tools.py CALENDAR_BACKEND=caldav)
+# caldav
+
+# Upgraded web search via SerpAPI (web_tools.py)
+# google-search-results
+
+# Environment variable loading
+python-dotenv

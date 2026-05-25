@@ -9,7 +9,7 @@
 from langchain_ollama import OllamaLLM
 
 # And initialize like this:
-llm = OllamaLLM(model="mistral")
+llm = OllamaLLM(model="gemma4-4b:latest")
 
 # Example interaction
 # response = llm.invoke("list down 5 fill in the blank quesios where in the blank has the format '<fill>'")

@@ -9,8 +9,6 @@ from app.api.agent import router as agent_router
 # from app.api.health import router as health_router
 from langgraph.checkpoint.redis import RedisSaver  
 
-from app.core.workflows import create_agent_workflow, generate_viz
-
 # from app.core.config import settings
 # from app.core.logging import configure_logging
 
@@ -67,24 +65,16 @@ async def lifespan(app: FastAPI):
 
     with RedisSaver.from_conn_string(REDIS_URL) as checkpointer:
         checkpointer.setup()
-        graph = create_agent_workflow().compile(
-            checkpointer=checkpointer
-        )
 
-        # from app.core.workflow_v2 import create_agent_workflow as caw
-        # new_graph = caw().compile()
-
-
-        from app.core.agents.reActAgent import ReActAgent
+        from app.core.agents.worker_agent import WorkerAgent
         from app.services.llm.Llmwrapper import llm
 
-        myAgent = ReActAgent(
+        myAgent = WorkerAgent(
             llm=llm,
-            checkpoint=checkpointer)
-        generate_viz(myAgent.graph)
+            checkpointer=checkpointer,
+            tools={})
 
         app.state.agent = myAgent
-        # app.state.graph = new_graph
         app.state.checkpointer = checkpointer
 
         print("🚀 Application starting up...")
