@@ -30,7 +30,7 @@ from langchain_core.messages import (
     AIMessage,
 )
 
-from backend.app.services.skill_manager import Skill
+from app.services.skill_manager import Skill
 
 
 # =========================================================
@@ -210,6 +210,132 @@ class ToolRuntime:
 
 class WorkerAgent:
 
+    PLANNER_PROMPT_TEMPLATE = """
+You are a planner agent.
+
+Your job:
+- determine next objective,
+- determine whether a tool is needed,
+- determine whether task is complete.
+
+CONVERSATION CONTEXT:
+{conversation_context}
+
+TASK:
+{task}
+
+RECENT OBSERVATIONS:
+{observations}
+
+RULES:
+- Do NOT select tools.
+- Do NOT generate tool arguments.
+- Think at planning level only.
+- If the task requires a tool, set needs_tool=true and describe
+  the goal clearly.
+- If no tool available for the task or 
+  the task can be answered from your own knowledge or from
+  existing observations alone, set needs_tool=false, done=true,
+  and write the full answer in final_answer.
+- If enough information from tools has been gathered to answer
+  the task, set done=true and write the full answer in
+  final_answer.
+
+OUTPUT JSON:
+{{
+  "thought": "string",
+  "needs_tool": true,
+  "done": false,
+  "goal": "string",
+  "final_answer": null
+}}
+"""
+
+    SKILL_PLANNER_PROMPT_TEMPLATE = """
+You are executing a predefined skill workflow.
+
+TASK:
+{task}
+
+CONVERSATION CONTEXT:
+{conversation_context}
+
+SKILL:
+{skill_context}
+
+RECENT OBSERVATIONS:
+{observations}
+
+RULES:
+- Follow the skill instructions carefully.
+- Determine only the NEXT objective.
+- Do NOT select tools.
+- Do NOT generate arguments.
+- If task is complete, mark done=true.
+
+OUTPUT JSON:
+{{
+  "thought": "string",
+  "needs_tool": true,
+  "done": false,
+  "goal": "string",
+  "final_answer": null
+}}
+"""
+
+    ACTION_PROMPT_TEMPLATE = """
+You are an action selector.
+
+Your job:
+- choose ONE allowed tool,
+- generate valid arguments,
+- or finalize.
+
+GOAL:
+{goal}
+
+RECENT OBSERVATIONS:
+{observations}
+
+AVAILABLE TOOLS:
+{tools}
+
+RULES:
+- ONLY use listed tools.
+- NEVER invent tools.
+- If no tool needed choose FINAL.
+
+OUTPUT JSON:
+{{
+  "thought": "string",
+  "action": "TOOL" | "FINAL",
+  "tool_name": "string or null",
+  "tool_input": {{}},
+  "final_answer": "string or null"
+}}
+"""
+
+    FINALIZE_PROMPT_TEMPLATE = """
+You are generating the final response.
+
+TASK:
+{task}
+
+OBSERVATIONS:
+{observations}
+
+RULES:
+- Use observations as source of truth.
+- Do not invent unsupported facts.
+
+OUTPUT JSON:
+{{
+  "response": "string",
+  "confidence": 0.0,
+  "sources_used": []
+}}
+"""
+
     def __init__(
         self,
         llm,
@@ -326,10 +452,6 @@ class WorkerAgent:
             "action_selector",
             self._action_router,
             {
-                # NOTE: This FINAL branch handles the case where action_selector
-                # independently decides no tool is needed (action == "FINAL"),
-                # separate from planner's done=True path. Both routes lead to
-                # finalize but are triggered by different agents in the pipeline.
                 "validate": "validate",
                 "final": "finalize",
             }
@@ -513,7 +635,6 @@ class WorkerAgent:
             tools=tools_text,
         )
 
-        # FIX #6: retry LLM call on JSON parse failure (up to 2 attempts)
         data = self._invoke_llm_with_retry(prompt)
 
         action = self.ActionSchema.model_validate(data)
@@ -582,7 +703,7 @@ class WorkerAgent:
 
         observations = state.get("observations", [])
 
-        new_obs = ObservationSchema(             # FIX #2: use ObservationSchema instead of plain dict
+        new_obs = ObservationSchema(
             summary=(
                 f"Invalid tool usage: "
                 f"{state.get('validation_error')}"
@@ -597,7 +718,6 @@ class WorkerAgent:
             confidence=1.0,
         ).model_dump()
 
-        # FIX #4: cap stored observations to a rolling window of 20
         observations = (observations + [new_obs])[-20:]
 
         return {
@@ -657,14 +777,11 @@ class WorkerAgent:
 
         summary = str(tool_result)
 
-        # FIX #3: flag truncation explicitly in the observation so the
-        # planner is aware the result was cut off, rather than silently losing data.
         truncated = False
         if len(summary) > 1000:
             summary = summary[:1000] + "... [TRUNCATED]"
             truncated = True
 
-        # FIX #2: use ObservationSchema instead of a plain dict
         new_obs = ObservationSchema(
             summary=summary,
             risks_or_uncertainties=(
@@ -675,10 +792,8 @@ class WorkerAgent:
             confidence=1.0,
         ).model_dump()
 
-        # Attach tool name outside schema (informational metadata)
         new_obs["tool"] = tool["name"]
 
-        # FIX #4: cap stored observations to a rolling window of 20
         observations = (observations + [new_obs])[-20:]
 
         logger.info(
@@ -712,7 +827,6 @@ class WorkerAgent:
             )[-5:]
         )
 
-        # FIX #6: retry LLM call on JSON parse failure (up to 2 attempts)
         data = self._invoke_llm_with_retry(prompt)
 
         final = FinalResponseSchema.model_validate(
@@ -728,49 +842,18 @@ class WorkerAgent:
             "final_answer": final.response
         }
 
-    # =====================================================
-    # PROMPTS
-    # =====================================================
-
     def _build_planner_prompt(
         self,
         task: str,
         conversation_context: str,
         observations: list,
-    ):
+    ) -> str:
 
-        return f"""
-You are a planner agent.
-
-Your job:
-- determine next objective,
-- determine whether a tool is needed,
-- determine whether task is complete.
-
-CONVERSATION CONTEXT:
-{conversation_context}
-
-TASK:
-{task}
-
-RECENT OBSERVATIONS:
-{json.dumps(observations, indent=2)}
-
-RULES:
-- Do NOT select tools.
-- Do NOT generate tool arguments.
-- Think at planning level only.
-- If enough information exists, mark done=true.
-
-OUTPUT JSON:
-{{
-  "thought": "string",
-  "needs_tool": true,
-  "done": false,
-  "goal": "string",
-  "final_answer": null
-}}
-"""
+        return self.PLANNER_PROMPT_TEMPLATE.format(
+            task=task,
+            conversation_context=conversation_context,
+            observations=json.dumps(observations, indent=2),
+        )
 
     def _build_skill_planner_prompt(
         self,
@@ -778,105 +861,38 @@ OUTPUT JSON:
         conversation_context: str,
         observations: list,
         skill_context: str,
-    ):
+    ) -> str:
 
-        return f"""
-You are executing a predefined skill workflow.
-
-TASK:
-{task}
-
-CONVERSATION CONTEXT:
-{conversation_context}
-
-SKILL:
-{skill_context}
-
-RECENT OBSERVATIONS:
-{json.dumps(observations, indent=2)}
-
-RULES:
-- Follow the skill instructions carefully.
-- Determine only the NEXT objective.
-- Do NOT select tools.
-- Do NOT generate arguments.
-- If task is complete, mark done=true.
-
-OUTPUT JSON:
-{{
-  "thought": "string",
-  "needs_tool": true,
-  "done": false,
-  "goal": "string",
-  "final_answer": null
-}}
-"""
+        return self.SKILL_PLANNER_PROMPT_TEMPLATE.format(
+            task=task,
+            conversation_context=conversation_context,
+            observations=json.dumps(observations, indent=2),
+            skill_context=skill_context,
+        )
 
     def _build_action_prompt(
         self,
         goal: str,
         observations: list,
         tools: str,
-    ):
+    ) -> str:
 
-        return f"""
-You are an action selector.
-
-Your job:
-- choose ONE allowed tool,
-- generate valid arguments,
-- or finalize.
-
-GOAL:
-{goal}
-
-RECENT OBSERVATIONS:
-{json.dumps(observations, indent=2)}
-
-AVAILABLE TOOLS:
-{tools}
-
-RULES:
-- ONLY use listed tools.
-- NEVER invent tools.
-- If no tool needed choose FINAL.
-
-OUTPUT JSON:
-{{
-  "thought": "string",
-  "action": "TOOL" | "FINAL",
-  "tool_name": "string or null",
-  "tool_input": {{}},
-  "final_answer": "string or null"
-}}
-"""
+        return self.ACTION_PROMPT_TEMPLATE.format(
+            goal=goal,
+            observations=json.dumps(observations, indent=2),
+            tools=tools,
+        )
 
     def _build_finalize_prompt(
         self,
         task: str,
         observations: list,
-    ):
+    ) -> str:
 
-        return f"""
-You are generating the final response.
-
-TASK:
-{task}
-
-OBSERVATIONS:
-{json.dumps(observations, indent=2)}
-
-RULES:
-- Use observations as source of truth.
-- Do not invent unsupported facts.
-
-OUTPUT JSON:
-{{
-  "response": "string",
-  "confidence": 0.0,
-  "sources_used": []
-}}
-"""
+        return self.FINALIZE_PROMPT_TEMPLATE.format(
+            task=task,
+            observations=json.dumps(observations, indent=2),
+        )
 
     # =====================================================
     # HELPERS
@@ -884,9 +900,9 @@ OUTPUT JSON:
 
     def _extract_json(self, text: str):
         """
-        FIX #1: robust JSON extraction that correctly handles nested objects.
-        Previous implementation used a non-greedy regex that stopped at the
-        first closing brace, breaking any nested JSON structure.
+        Robust JSON extraction that correctly handles nested objects.
+        Walks character-by-character to find the outermost JSON object,
+        correctly handling nesting, strings, and escape sequences.
         """
 
         if not text:
@@ -902,8 +918,6 @@ OUTPUT JSON:
         if fenced:
             return json.loads(fenced.group(1))
 
-        # Walk character-by-character to find the outermost JSON object,
-        # correctly handling nesting, strings, and escape sequences.
         s = str(text)
         start = s.find("{")
 
@@ -960,6 +974,7 @@ OUTPUT JSON:
         *,
         max_attempts: int = 2,
     ) -> dict:
+
         last_error: Exception = ValueError("No attempts made")
 
         for attempt in range(max_attempts):
